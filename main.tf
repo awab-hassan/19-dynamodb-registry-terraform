@@ -20,21 +20,21 @@ locals {
   }
 }
 
-# Networking Registry
-resource "aws_dynamodb_table" "networking_registry" {
+# Entity Relation Table (Graph)
+resource "aws_dynamodb_table" "entity_relation_table" {
   for_each = local.envs
 
-  name         = "${each.value.name_prefix}NetworkingRegistry"
+  name         = "${each.value.name_prefix}EntityRelation_Table"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "PK"
   range_key    = "SK"
 
-  attribute { name = "PK";         type = "S" }
-  attribute { name = "SK";         type = "S" }
-  attribute { name = "ALTPK";      type = "S" }
-  attribute { name = "ALTSK";      type = "S" }
-  attribute { name = "creator_id"; type = "S" }
-  attribute { name = "user_id";     type = "S" }
+  attribute { name = "PK";               type = "S" }
+  attribute { name = "SK";               type = "S" }
+  attribute { name = "ALTPK";            type = "S" }
+  attribute { name = "ALTSK";            type = "S" }
+  attribute { name = "source_node_id";   type = "S" }
+  attribute { name = "target_node_id";   type = "S" }
 
   global_secondary_index {
     name            = "GSI_AllKey"
@@ -44,22 +44,22 @@ resource "aws_dynamodb_table" "networking_registry" {
   }
 
   global_secondary_index {
-    name            = "creator_records_index"
-    hash_key        = "creator_id"
+    name            = "source_node_index"
+    hash_key        = "source_node_id"
     range_key       = "PK"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "user_records_index"
-    hash_key        = "user_id"
+    name            = "target_node_index"
+    hash_key        = "target_node_id"
     range_key       = "PK"
     projection_type = "ALL"
   }
 
   deletion_protection_enabled = each.value.deletion_protection
   point_in_time_recovery { enabled = true }
-  server_side_encryption  { enabled = true }
+  server_side_encryption { enabled = true }
 
   tags = {
     Environment = each.key
@@ -67,24 +67,24 @@ resource "aws_dynamodb_table" "networking_registry" {
   }
 }
 
-# Transaction Registry
-resource "aws_dynamodb_table" "transaction_registry" {
+# Event Log Table (Ledger/Time-Series)
+resource "aws_dynamodb_table" "event_log_table" {
   for_each = local.envs
 
-  name         = "${each.value.name_prefix}TransactionRegistry"
+  name         = "${each.value.name_prefix}EventLog_Table"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "PK"
   range_key    = "SK"
 
-  attribute { name = "PK";              type = "S" }
-  attribute { name = "SK";              type = "S" }
-  attribute { name = "ALTPK";           type = "S" }
-  attribute { name = "ALTSK";           type = "S" }
-  attribute { name = "creator_id";      type = "S" }
-  attribute { name = "user_id";          type = "S" }
-  attribute { name = "GSI_Payout_PK";   type = "S" }
-  attribute { name = "transaction_date"; type = "S" }
-  attribute { name = "order_id";        type = "S" }
+  attribute { name = "PK";                type = "S" }
+  attribute { name = "SK";                type = "S" }
+  attribute { name = "ALTPK";             type = "S" }
+  attribute { name = "ALTSK";             type = "S" }
+  attribute { name = "reference_node_id"; type = "S" }
+  attribute { name = "account_id";        type = "S" }
+  attribute { name = "GSI_Batch_PK";      type = "S" }
+  attribute { name = "event_timestamp";   type = "S" }
+  attribute { name = "correlation_id";    type = "S" }
 
   global_secondary_index {
     name            = "GSI_AllKey"
@@ -94,35 +94,35 @@ resource "aws_dynamodb_table" "transaction_registry" {
   }
 
   global_secondary_index {
-    name            = "creator_records_index"
-    hash_key        = "creator_id"
+    name            = "reference_node_index"
+    hash_key        = "reference_node_id"
     range_key       = "PK"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "user_records_index"
-    hash_key        = "user_id"
+    name            = "account_index"
+    hash_key        = "account_id"
     range_key       = "PK"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "GSI_Payout"
-    hash_key        = "GSI_Payout_PK"
-    range_key       = "transaction_date"
+    name            = "GSI_Batch_Index"
+    hash_key        = "GSI_Batch_PK"
+    range_key       = "event_timestamp"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "GSI_order_id"
-    hash_key        = "order_id"
+    name            = "GSI_correlation_index"
+    hash_key        = "correlation_id"
     projection_type = "ALL"
   }
 
   deletion_protection_enabled = each.value.deletion_protection
   point_in_time_recovery { enabled = true }
-  server_side_encryption  { enabled = true }
+  server_side_encryption { enabled = true }
 
   tags = {
     Environment = each.key
@@ -130,45 +130,45 @@ resource "aws_dynamodb_table" "transaction_registry" {
   }
 }
 
-# Aggregated Data Registry
-resource "aws_dynamodb_table" "aggregated_data_registry" {
+# Aggregated Metrics Table (Analytics)
+resource "aws_dynamodb_table" "aggregated_metrics_table" {
   for_each = local.envs
 
-  name         = "${each.value.name_prefix}AggregatedDataRegistry"
+  name         = "${each.value.name_prefix}AggregatedMetrics_Table"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
-  range_key    = "flag"
+  hash_key     = "dimension_hash"
+  range_key    = "period_sort_key"
 
-  attribute { name = "id";                  type = "S" }
-  attribute { name = "flag";                type = "S" }
-  attribute { name = "GSISK_t_contributor"; type = "S" }
-  attribute { name = "GSISK_t_orders";      type = "S" }
-  attribute { name = "GSISK_t_tokens";      type = "S" }
+  attribute { name = "dimension_hash";      type = "S" }
+  attribute { name = "period_sort_key";     type = "S" }
+  attribute { name = "GSISK_metric_alpha";  type = "S" }
+  attribute { name = "GSISK_metric_beta";   type = "S" }
+  attribute { name = "GSISK_metric_gamma";  type = "S" }
 
   global_secondary_index {
-    name            = "GSI_top_contributor"
-    hash_key        = "id"
-    range_key       = "GSISK_t_contributor"
+    name            = "GSI_metric_alpha_index"
+    hash_key        = "dimension_hash"
+    range_key       = "GSISK_metric_alpha"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "GSI_top_orders"
-    hash_key        = "id"
-    range_key       = "GSISK_t_orders"
+    name            = "GSI_metric_beta_index"
+    hash_key        = "dimension_hash"
+    range_key       = "GSISK_metric_beta"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name            = "GSI_top_tokens"
-    hash_key        = "id"
-    range_key       = "GSISK_t_tokens"
+    name            = "GSI_metric_gamma_index"
+    hash_key        = "dimension_hash"
+    range_key       = "GSISK_metric_gamma"
     projection_type = "ALL"
   }
 
   deletion_protection_enabled = each.value.deletion_protection
   point_in_time_recovery { enabled = true }
-  server_side_encryption  { enabled = true }
+  server_side_encryption { enabled = true }
 
   tags = {
     Environment = each.key
