@@ -1,6 +1,6 @@
 # Project # 19 - Dynamodb Registry Terraform
 
-Terraform module that provisions six DynamoDB tables across three registries (Networking, Transaction, AggregatedData), each deployed as a staging and production pair, with purpose-built Global Secondary Indexes (GSIs) for the platform's core access patterns.
+This Terraform module provisions a multi-environment DynamoDB setup across three data registries, each with a production and staging pair. It implements targeted data models using optimized partition keys, sort keys, and Global Secondary Indexes (GSIs) designed for graph, ledger, and analytical access patterns. Utilizing on-demand capacity, the architecture balances cost-efficiency with the ability to handle variable workloads. This automated configuration ensures staging environments accurately reflect production, facilitating reliable testing and secure deployments.
 
 ## Tables and Indexes
 
