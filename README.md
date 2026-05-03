@@ -10,11 +10,11 @@ This Terraform module provisions a multi-environment DynamoDB setup across three
 | EventLog_Table (+ `_staging`) | `account_id` / `event_timestamp` | `GSI_Batch_Index`, `GSI_correlation_index` |
 | AggregatedMetrics_Table (+ `_staging`) | `dimension_hash` / `period_sort_key` | `GSI_metric_alpha_index`, `GSI_metric_beta_index`, `GSI_metric_gamma_index` |
 
-**EntityRelation_Table** — models the graph relationships between primary and secondary entities. `source_node_index` lists every target a specific source connects to; `target_node_index` lists every source connected to a target; `GSI_AllKey` provides a full cross-cut for backend auditing.
+**EntityRelation_Table:** models the graph relationships between primary and secondary entities. `source_node_index` lists every target a specific source connects to; `target_node_index` lists every source connected to a target; `GSI_AllKey` provides a full cross-cut for backend auditing.
 
-**EventLog_Table** — immutable time-series ledger. `GSI_Batch_Index` surfaces events grouped by processing batches; `GSI_correlation_index` looks up a specific event flow by its public correlation ID.
+**EventLog_Table:** immutable time-series ledger. `GSI_Batch_Index` surfaces events grouped by processing batches; `GSI_correlation_index` looks up a specific event flow by its public correlation ID.
 
-**AggregatedMetrics_Table** — precomputed analytics data. Three GSIs rank various platform metrics (Alpha, Beta, and Gamma dimensions) for reporting dashboards and system health monitoring.
+**AggregatedMetrics_Table:** precomputed analytics data. Three GSIs rank various platform metrics (Alpha, Beta, and Gamma dimensions) for reporting dashboards and system health monitoring.
 
 ## Architecture
 
