@@ -6,24 +6,24 @@ This Terraform module provisions a multi-environment DynamoDB setup across three
 
 | Table | PK / SK | GSIs |
 |---|---|---|
-| NetworkingRegistry (+ `_staging`) | `creator_id` / `user_id` | `GSI_AllKey`, `creator_records_index`, `user_records_index` |
-| TransactionRegistry (+ `_staging`) | `user_id` / `timestamp` | `GSI_Payout`, `GSI_order_id` |
-| AggregatedDataRegistry (+ `_staging`) | `partition_key` / `sort_key` | `GSI_top_contributor`, `GSI_top_orders`, `GSI_top_tokens` |
+| EntityRelation_Table (+ `_staging`) | `source_node_id` / `target_node_id` | `GSI_AllKey`, `source_node_index`, `target_node_index` |
+| EventLog_Table (+ `_staging`) | `account_id` / `event_timestamp` | `GSI_Batch_Index`, `GSI_correlation_index` |
+| AggregatedMetrics_Table (+ `_staging`) | `dimension_hash` / `period_sort_key` | `GSI_metric_alpha_index`, `GSI_metric_beta_index`, `GSI_metric_gamma_index` |
 
-**NetworkingRegistry** — models the creator/user follow and subscribe graph. `creator_records_index` lists every user a creator has; `user_records_index` lists every creator a user follows; `GSI_AllKey` provides a full cross-cut for admin tooling.
+**EntityRelation_Table** — models the graph relationships between primary and secondary entities. `source_node_index` lists every target a specific source connects to; `target_node_index` lists every source connected to a target; `GSI_AllKey` provides a full cross-cut for backend auditing.
 
-**TransactionRegistry** — payment ledger. `GSI_Payout` surfaces payout events per creator; `GSI_order_id` looks up a transaction by public order ID.
+**EventLog_Table** — immutable time-series ledger. `GSI_Batch_Index` surfaces events grouped by processing batches; `GSI_correlation_index` looks up a specific event flow by its public correlation ID.
 
-**AggregatedDataRegistry** — precomputed leaderboard data. Three GSIs rank top contributors, highest-order creators, and highest-token holders for feed ranking and dashboards.
+**AggregatedMetrics_Table** — precomputed analytics data. Three GSIs rank various platform metrics (Alpha, Beta, and Gamma dimensions) for reporting dashboards and system health monitoring.
 
 ## Architecture
 
-```
+```text
 Application (Lambda / ECS)
          |
-         +---> NetworkingRegistry   (creator_id + user_id, 3 GSIs)
-         +---> TransactionRegistry  (user_id + timestamp, 2 GSIs)
-         +---> AggregatedDataRegistry (partition_key + sort_key, 3 GSIs)
+         +---> EntityRelation_Table     (source_node_id + target_node_id, 3 GSIs)
+         +---> EventLog_Table           (account_id + event_timestamp, 2 GSIs)
+         +---> AggregatedMetrics_Table  (dimension_hash + period_sort_key, 3 GSIs)
 
 Each registry has a _staging counterpart for pre-production testing.
 ```
@@ -34,9 +34,9 @@ Terraform 1.x · AWS DynamoDB (on-demand) · ap-northeast-1 (Tokyo)
 
 ## Repository Layout
 
-```
+```text
 dynamodb-registry-terraform/
-├── main-1.tf       # Six aws_dynamodb_table resources with GSIs
+├── main-1.tf        # Six aws_dynamodb_table resources with GSIs
 ├── .gitignore
 └── README.md
 ```
@@ -59,6 +59,6 @@ Take a point-in-time backup or export to S3 before destroying. This operation is
 
 ## Notes
 
-- All tables use `PAY_PER_REQUEST` billing. If traffic patterns stabilise, switching to `PROVISIONED` with autoscaling reduces cost.
+- All tables use `PAY_PER_REQUEST` billing. If traffic patterns stabilize, switching to `PROVISIONED` with autoscaling reduces cost.
 - Every write to a base table also writes to all its GSIs. Review GSI usage before adding new indexes.
-- `_staging` suffix on table names keeps staging and production isolated within the same AWS account and Terraform apply.
+- The `_staging` suffix on table names keeps staging and production isolated within the same AWS account and Terraform apply.
