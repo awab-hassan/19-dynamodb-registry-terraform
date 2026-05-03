@@ -6,11 +6,11 @@ Terraform module that provisions six DynamoDB tables across three registries (Ne
 
 | Table | PK / SK | GSIs |
 |---|---|---|
-| NetworkingRegistry (+ `_staging`) | `creator_id` / `fan_id` | `GSI_AllKey`, `creator_records_index`, `fan_records_index` |
+| NetworkingRegistry (+ `_staging`) | `creator_id` / `user_id` | `GSI_AllKey`, `creator_records_index`, `user_records_index` |
 | TransactionRegistry (+ `_staging`) | `user_id` / `timestamp` | `GSI_Payout`, `GSI_order_id` |
 | AggregatedDataRegistry (+ `_staging`) | `partition_key` / `sort_key` | `GSI_top_contributor`, `GSI_top_orders`, `GSI_top_tokens` |
 
-**NetworkingRegistry** — models the creator/fan follow and subscribe graph. `creator_records_index` lists every fan a creator has; `fan_records_index` lists every creator a fan follows; `GSI_AllKey` provides a full cross-cut for admin tooling.
+**NetworkingRegistry** — models the creator/user follow and subscribe graph. `creator_records_index` lists every user a creator has; `user_records_index` lists every creator a user follows; `GSI_AllKey` provides a full cross-cut for admin tooling.
 
 **TransactionRegistry** — payment ledger. `GSI_Payout` surfaces payout events per creator; `GSI_order_id` looks up a transaction by public order ID.
 
@@ -21,7 +21,7 @@ Terraform module that provisions six DynamoDB tables across three registries (Ne
 ```
 Application (Lambda / ECS)
          |
-         +---> NetworkingRegistry   (creator_id + fan_id, 3 GSIs)
+         +---> NetworkingRegistry   (creator_id + user_id, 3 GSIs)
          +---> TransactionRegistry  (user_id + timestamp, 2 GSIs)
          +---> AggregatedDataRegistry (partition_key + sort_key, 3 GSIs)
 
