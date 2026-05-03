@@ -30,16 +30,7 @@ Each registry has a _staging counterpart for pre-production testing.
 
 ## Stack
 
-Terraform 1.x · AWS DynamoDB (on-demand) · ap-northeast-1 (Tokyo)
-
-## Repository Layout
-
-```text
-dynamodb-registry-terraform/
-├── main-1.tf        # Six aws_dynamodb_table resources with GSIs
-├── .gitignore
-└── README.md
-```
+Terraform 1.x · AWS DynamoDB (on-demand) 
 
 ## Deployment
 
